@@ -1,0 +1,962 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GD-CoRPA Wafer Map Defect Classifier</title>
+    <!-- Outfit Google Font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- FontAwesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        /* Theme and Base Variables */
+        :root {
+            --bg-dark: #07070f;
+            --bg-card: rgba(20, 20, 35, 0.45);
+            --border-glass: rgba(255, 255, 255, 0.07);
+            --border-hover: rgba(255, 255, 255, 0.15);
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+            --cyan-accent: #06b6d4;
+            --cyan-glow: rgba(6, 182, 212, 0.3);
+            --purple-accent: #8b5cf6;
+            --purple-glow: rgba(139, 92, 246, 0.3);
+            --red-accent: #ef4444;
+            --red-glow: rgba(239, 68, 68, 0.3);
+            --green-accent: #10b981;
+            --font-outfit: 'Outfit', sans-serif;
+        }
+
+        /* Global Reset */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text-primary);
+            font-family: var(--font-outfit);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            overflow-x: hidden;
+            line-height: 1.5;
+        }
+
+        /* Background Radial Glow */
+        .glass-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            z-index: -1;
+            background: 
+                radial-gradient(circle at 10% 20%, rgba(139, 92, 246, 0.12) 0%, transparent 40%),
+                radial-gradient(circle at 80% 80%, rgba(6, 182, 212, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 50% 50%, #0c081e 0%, #04020a 100%);
+        }
+
+        /* App Container */
+        .app-container {
+            width: 100%;
+            max-width: 1400px;
+            padding: 2.5rem 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+        }
+
+        /* Header Styles */
+        .app-header {
+            text-align: center;
+            margin-bottom: 1rem;
+        }
+
+        .logo {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .logo i {
+            font-size: 2.2rem;
+            color: var(--cyan-accent);
+            text-shadow: 0 0 15px var(--cyan-glow);
+        }
+
+        .logo h1 {
+            font-size: 2.5rem;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+            background: linear-gradient(135deg, #ffffff 30%, var(--cyan-accent) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .subtitle {
+            font-size: 1.1rem;
+            color: var(--text-secondary);
+            font-weight: 300;
+            max-width: 600px;
+            margin: 0 auto 1.25rem;
+        }
+
+        .badge-container {
+            display: flex;
+            justify-content: center;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+
+        .badge {
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid var(--border-glass);
+            padding: 0.4rem 0.85rem;
+            border-radius: 50px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            color: var(--text-secondary);
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .badge i {
+            color: var(--cyan-accent);
+        }
+
+        /* Glassmorphic Card base */
+        .glass-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-glass);
+            border-radius: 20px;
+            padding: 1.75rem;
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4);
+            transition: transform 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .glass-card:hover {
+            border-color: var(--border-hover);
+            box-shadow: 0 20px 45px rgba(0, 0, 0, 0.5);
+        }
+
+        .glass-card h2 {
+            font-size: 1.3rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+        }
+
+        .glass-card h2 i {
+            color: var(--cyan-accent);
+        }
+
+        .card-desc {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            margin-bottom: 1.25rem;
+            line-height: 1.4;
+        }
+
+        /* Grid Layout */
+        .main-grid {
+            display: grid;
+            grid-template-columns: 420px 1fr;
+            gap: 2rem;
+            align-items: start;
+        }
+
+        @media (max-width: 1024px) {
+            .main-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .control-panel, .results-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+        }
+
+        /* Error Banner */
+        .error-banner {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid var(--red-accent);
+            border-radius: 12px;
+            padding: 1rem;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-size: 0.9rem;
+        }
+
+        .error-banner i {
+            color: var(--red-accent);
+            font-size: 1.2rem;
+        }
+
+        /* Upload Area form */
+        .upload-form-container {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .file-select-btn {
+            display: block;
+            width: 100%;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border-glass);
+            border-radius: 12px;
+            padding: 1rem;
+            color: var(--text-primary);
+            font-family: var(--font-outfit);
+            font-size: 0.95rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .file-select-btn:hover {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: var(--border-hover);
+        }
+
+        .submit-btn {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 0.5rem;
+            width: 100%;
+            background: linear-gradient(135deg, var(--cyan-accent), var(--purple-accent));
+            border: none;
+            border-radius: 12px;
+            padding: 1rem;
+            color: #fff;
+            font-family: var(--font-outfit);
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(6, 182, 212, 0.2);
+        }
+
+        .submit-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(6, 182, 212, 0.4);
+        }
+
+        /* Sample Gallery */
+        .samples-gallery {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0.75rem;
+        }
+
+        .sample-item {
+            width: 100%;
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--border-glass);
+            border-radius: 12px;
+            padding: 0.5rem;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.2s ease;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.4rem;
+            font-family: var(--font-outfit);
+        }
+
+        .sample-item:hover {
+            background: rgba(255, 255, 255, 0.06);
+            border-color: var(--purple-accent);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px var(--purple-glow);
+        }
+
+        .sample-item.active {
+            background: rgba(139, 92, 246, 0.08);
+            border-color: var(--purple-accent);
+            box-shadow: 0 0 10px var(--purple-glow);
+        }
+
+        .sample-item img {
+            width: 100%;
+            aspect-ratio: 1;
+            border-radius: 8px;
+            object-fit: cover;
+            background: #000;
+        }
+
+        .sample-item span {
+            font-size: 0.75rem;
+            font-weight: 500;
+            color: var(--text-secondary);
+        }
+
+        .sample-item:hover span {
+            color: var(--text-primary);
+        }
+
+        /* Placeholders */
+        .placeholder-card {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 6rem 3rem;
+            min-height: 450px;
+        }
+
+        .magic-icon {
+            font-size: 3.5rem;
+            color: var(--text-muted);
+            margin-bottom: 1.5rem;
+            animation: float 3s ease-in-out infinite;
+        }
+
+        .placeholder-card h3 {
+            font-size: 1.4rem;
+            font-weight: 600;
+            margin-bottom: 0.75rem;
+        }
+
+        .placeholder-card p {
+            font-size: 0.95rem;
+            color: var(--text-secondary);
+            max-width: 500px;
+            line-height: 1.6;
+        }
+
+        /* Results Section styling */
+        .results-content {
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+            animation: fadeIn 0.4s ease-out forwards;
+        }
+
+        /* Primary Result Card */
+        .primary-result-card {
+            background: linear-gradient(135deg, rgba(20, 20, 35, 0.6) 0%, rgba(139, 92, 246, 0.05) 100%);
+            border-left: 4px solid var(--purple-accent);
+        }
+
+        .result-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .label {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-secondary);
+            display: block;
+            margin-bottom: 0.25rem;
+        }
+
+        #predicted-class-name {
+            font-size: 2.2rem;
+            font-weight: 800;
+            color: #fff;
+            text-shadow: 0 0 20px rgba(255, 255, 255, 0.15);
+        }
+
+        .confidence-badge {
+            background: rgba(139, 92, 246, 0.15);
+            border: 1px solid var(--purple-accent);
+            border-radius: 12px;
+            padding: 0.5rem 1rem;
+            text-align: center;
+            box-shadow: 0 0 15px var(--purple-glow);
+        }
+
+        #confidence-percentage {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--purple-accent);
+            display: block;
+        }
+
+        .conf-lbl {
+            font-size: 0.65rem;
+            text-transform: uppercase;
+            color: var(--text-secondary);
+        }
+
+        /* Prob breakdown button */
+        .toggle-btn {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-family: var(--font-outfit);
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.5rem 0;
+            transition: color 0.2s;
+            width: 100%;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+            margin-top: 0.75rem;
+            justify-content: space-between;
+        }
+
+        .toggle-btn:hover {
+            color: var(--text-primary);
+        }
+
+        .toggle-btn i {
+            transition: transform 0.3s ease;
+        }
+
+        .toggle-btn.active i {
+            transform: rotate(180deg);
+        }
+
+        .conf-bars-container {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.4s cubic-bezier(0, 1, 0, 1);
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            margin-top: 0.75rem;
+        }
+
+        .conf-bars-container.expanded {
+            max-height: 1000px;
+            transition: max-height 0.4s cubic-bezier(1, 0, 1, 0);
+        }
+
+        .conf-row {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+
+        .conf-row-info {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.8rem;
+        }
+
+        .conf-row-name {
+            color: var(--text-secondary);
+        }
+
+        .conf-row-val {
+            font-weight: 600;
+        }
+
+        .bar-bg {
+            width: 100%;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .bar-fill {
+            height: 100%;
+            background: var(--purple-accent);
+            border-radius: 10px;
+            transition: width 0.8s cubic-bezier(0.1, 0.8, 0.3, 1);
+        }
+
+        .bar-fill.top-pred {
+            background: linear-gradient(90deg, var(--purple-accent), var(--cyan-accent));
+        }
+
+        /* Aux predictions grid */
+        .aux-predictions-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1.5rem;
+        }
+
+        @media (max-width: 640px) {
+            .aux-predictions-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .aux-card {
+            display: flex;
+            gap: 1.25rem;
+            align-items: flex-start;
+        }
+
+        .aux-icon-container {
+            width: 44px;
+            height: 44px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            flex-shrink: 0;
+        }
+
+        .aux-icon-container.mechanism {
+            background: rgba(6, 182, 212, 0.15);
+            border: 1px solid var(--cyan-accent);
+            color: var(--cyan-accent);
+            box-shadow: 0 0 10px var(--cyan-glow);
+        }
+
+        .aux-icon-container.yield {
+            background: rgba(239, 68, 68, 0.15);
+            border: 1px solid var(--red-accent);
+            color: var(--red-accent);
+            box-shadow: 0 0 10px var(--red-glow);
+        }
+
+        .aux-details {
+            flex-grow: 1;
+        }
+
+        .aux-details h3 {
+            font-size: 1.05rem;
+            font-weight: 600;
+            margin-bottom: 0.4rem;
+            color: #fff;
+        }
+
+        .physics-note {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+        }
+
+        /* Yield Display */
+        .yield-display {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 0.4rem;
+        }
+
+        .yield-progress-bar {
+            flex-grow: 1;
+            height: 8px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--green-accent), var(--red-accent));
+            border-radius: 10px;
+            transition: width 0.8s cubic-bezier(0.1, 0.8, 0.3, 1);
+        }
+
+        .yield-val {
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: #fff;
+            flex-shrink: 0;
+        }
+
+        /* Attention Card & Interactive Overlay */
+        .viz-wrapper {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            align-items: center;
+            margin-top: 1.5rem;
+        }
+
+        .image-viewer {
+            position: relative;
+            width: 100%;
+            max-width: 480px;
+            aspect-ratio: 1;
+            border-radius: 16px;
+            overflow: hidden;
+            border: 1px solid var(--border-glass);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            background: #000;
+        }
+
+        .image-viewer img {
+            display: block;
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
+        #gate-overlay-image {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            opacity: 0.5;
+            mix-blend-mode: normal;
+        }
+
+        /* Slider Controls */
+        .slider-control {
+            width: 100%;
+            max-width: 480px;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .slider-labels {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: var(--text-secondary);
+        }
+
+        /* Custom Range Slider styling */
+        input[type="range"] {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            outline: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: var(--cyan-accent);
+            cursor: pointer;
+            box-shadow: 0 0 10px var(--cyan-glow);
+            transition: transform 0.1s ease;
+        }
+
+        input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+        }
+
+        /* Legend bar */
+        .legend-bar {
+            margin-top: 0.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.35rem;
+        }
+
+        .legend-gradient {
+            width: 100%;
+            height: 8px;
+            border-radius: 4px;
+            background: linear-gradient(90deg, #3f51b5, #ffffff, #f44336); /* Coolwarm color scheme approximate */
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .legend-labels {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.7rem;
+            color: var(--text-muted);
+        }
+
+        /* Footer styling */
+        .app-footer {
+            text-align: center;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+            padding-top: 1.5rem;
+            margin-top: 2rem;
+        }
+
+        /* Utilities */
+        .hidden {
+            display: none !important;
+        }
+
+        /* Keyframes */
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-8px); }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .pulse-icon {
+            animation: pulse 2.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); text-shadow: 0 0 5px var(--cyan-glow); }
+            50% { transform: scale(1.05); text-shadow: 0 0 18px var(--cyan-glow); }
+            100% { transform: scale(1); text-shadow: 0 0 5px var(--cyan-glow); }
+        }
+    </style>
+</head>
+<body>
+    <div class="glass-bg"></div>
+    <div class="app-container">
+        
+        <!-- Header -->
+        <header class="app-header">
+            <div class="logo">
+                <i class="fa-solid fa-microchip pulse-icon"></i>
+                <h1>GD-CoRPA</h1>
+            </div>
+            <p class="subtitle">Gated Dual-Coordinate Relative Position Attention Wafer Defect Classifier</p>
+            <div class="badge-container">
+                <span class="badge"><i class="fa-solid fa-brain"></i> Single Shared Backbone</span>
+                <span class="badge"><i class="fa-solid fa-atom"></i> Physics-Informed Aux Heads</span>
+            </div>
+        </header>
+
+        <!-- Main Grid Layout -->
+        <main class="main-grid">
+            
+            <!-- Left Side: Inputs -->
+            <section class="control-panel">
+                
+                <!-- Error Message if Any -->
+                {% if error %}
+                <div class="error-banner">
+                    <i class="fa-solid fa-triangle-exclamation"></i>
+                    <span><strong>Error:</strong> {{ error }}</span>
+                </div>
+                {% endif %}
+
+                <!-- Card 1: Upload Zone Form -->
+                <div class="glass-card upload-card">
+                    <h2><i class="fa-solid fa-cloud-arrow-up"></i> Upload Wafer Map</h2>
+                    <p class="card-desc">Select a JPEG/PNG wafer map image (recommended 640×640 pixels, viridis-colormapped) to analyze.</p>
+                    
+                    <form action="/" method="POST" enctype="multipart/form-data" class="upload-form-container">
+                        <input type="file" name="image" id="file-input" class="file-select-btn" accept="image/*" required>
+                        <button type="submit" class="submit-btn">
+                            <i class="fa-solid fa-wand-magic-sparkles"></i> Predict Uploaded Image
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Card 2: Interactive Sample Gallery -->
+                <div class="glass-card samples-card">
+                    <h2><i class="fa-solid fa-vials"></i> Quick Test Samples</h2>
+                    <p class="card-desc">Click any wafer pattern to run evaluation instantly.</p>
+                    <div class="samples-gallery">
+                        {% for sample in samples %}
+                        <form action="/" method="POST" style="margin: 0; width: 100%;">
+                            <input type="hidden" name="sample_class" value="{{ sample.class }}">
+                            <button type="submit" class="sample-item {% if results and results.selected_sample == sample.class %}active{% endif %}">
+                                <img src="{{ sample.url }}" alt="{{ sample.class }}">
+                                <span>{{ sample.class }}</span>
+                            </button>
+                        </form>
+                        {% endfor %}
+                    </div>
+                </div>
+            </section>
+
+            <!-- Right Side: Predictions & Visualizations -->
+            <section class="results-panel">
+                
+                {% if not results %}
+                <!-- Placeholder / Initial State -->
+                <div id="results-placeholder" class="glass-card placeholder-card">
+                    <i class="fa-solid fa-wand-magic-sparkles magic-icon"></i>
+                    <h3>Ready for Inference</h3>
+                    <p>Upload a wafer bin map or select a quick test sample on the left to analyze the defect pattern, predict the failure mechanism, estimate yield loss, and visualize the attention routing gates.</p>
+                </div>
+                {% else %}
+
+                <!-- Results Content -->
+                <div class="results-content">
+                    
+                    <!-- Defect Prediction Header Card -->
+                    <div class="glass-card primary-result-card">
+                        <div class="result-header">
+                            <div>
+                                <span class="label">Predicted Defect Pattern</span>
+                                <h2 id="predicted-class-name">{{ results.predicted_class }}</h2>
+                            </div>
+                            <div class="confidence-badge">
+                                <span id="confidence-percentage">{{ "%.1f"|format(results.pattern_confidence_percent) }}%</span>
+                                <span class="conf-lbl">Confidence</span>
+                            </div>
+                        </div>
+                        
+                        <!-- Confidence Distribution list -->
+                        <div class="conf-distribution">
+                            <button id="toggle-conf-btn" class="toggle-btn">
+                                <span>Show Probability Breakdown</span>
+                                <i class="fa-solid fa-chevron-down"></i>
+                            </button>
+                            <div id="conf-bars-container" class="conf-bars-container collapsed">
+                                {% for conf in results.pattern_confidences %}
+                                <div class="conf-row">
+                                    <div class="conf-row-info">
+                                        <span class="conf-row-name">{{ conf.class }}</span>
+                                        <span class="conf-row-val">{{ "%.1f"|format(conf.prob_percent) }}%</span>
+                                    </div>
+                                    <div class="bar-bg">
+                                        <div class="bar-fill {% if conf.class == results.predicted_class %}top-pred{% endif %}" style="width: {{ conf.prob_percent }}%;"></div>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Aux Predictions Grid -->
+                    <div class="aux-predictions-grid">
+                        
+                        <!-- Failure Mechanism Card -->
+                        <div class="glass-card aux-card">
+                            <div class="aux-icon-container mechanism">
+                                <i class="fa-solid fa-gears"></i>
+                            </div>
+                            <div class="aux-details">
+                                <span class="label">Estimated Failure Mechanism</span>
+                                <h3 id="predicted-mechanism">{{ results.predicted_mechanism }}</h3>
+                                <p class="physics-note"><i class="fa-solid fa-circle-info"></i> Physics-literature-derived root cause mapping</p>
+                            </div>
+                        </div>
+
+                        <!-- Expected Yield Loss Card -->
+                        <div class="glass-card aux-card">
+                            <div class="aux-icon-container yield">
+                                <i class="fa-solid fa-percent"></i>
+                            </div>
+                            <div class="aux-details">
+                                <span class="label">Expected Yield Loss</span>
+                                <div class="yield-display">
+                                    <div class="yield-progress-bar">
+                                        <div id="yield-progress-fill" class="progress-fill" style="width: {{ results.yield_loss_percentage }}%;"></div>
+                                    </div>
+                                    <span id="predicted-yield-loss" class="yield-val">{{ "%.1f"|format(results.yield_loss_percentage) }}%</span>
+                                </div>
+                                <p class="physics-note"><i class="fa-solid fa-circle-info"></i> Defect-density-derived heuristic estimation</p>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <!-- Defect Localization -->
+                    <div class="glass-card localization-card">
+                        <h2><i class="fa-solid fa-crosshairs"></i> Defect Localization</h2>
+                        <p class="card-desc">
+                            {% if results.num_defect_regions > 0 %}
+                            Boxed region{{ "s" if results.num_defect_regions != 1 else "" }} show where defective-die density is statistically elevated above this wafer's own background scatter &mdash; derived from the dequantizer's per-pixel class map, not a separate detection head.
+                            {% else %}
+                            No region of statistically elevated defect density was found &mdash; the defective dies present are consistent with background scatter rather than a localized cluster.
+                            {% endif %}
+                        </p>
+                        <div class="viz-wrapper">
+                            <div class="image-viewer">
+                                <img id="localized-image" src="{{ results.localized_image_url }}" alt="Wafer Map with Defect Localization Boxes">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- GD-CoRPA Gated Attention Visualizer -->
+                    <div class="glass-card attention-card">
+                        <h2><i class="fa-solid fa-eye"></i> GD-CoRPA Gate Routing Overlay</h2>
+                        <p class="card-desc">Visualizes attention coordinate routing inside the model. Gating weights dynamically select between <strong>Cartesian</strong> and <strong>Polar</strong> relative attention per patch.</p>
+                        
+                        <div class="viz-wrapper">
+                            <!-- Overlay Image Container -->
+                            <div class="image-viewer">
+                                <img id="original-image" src="{{ results.original_image_url }}" alt="Wafer Map">
+                                <img id="gate-overlay-image" src="{{ results.gate_overlay_url }}" alt="Gate Attention Overlay" style="opacity: 0.5;">
+                            </div>
+                            
+                            <!-- Opacity Slider -->
+                            <div class="slider-control">
+                                <div class="slider-labels">
+                                    <span>Raw Wafer Map</span>
+                                    <span>Attention Overlay</span>
+                                </div>
+                                <input type="range" id="opacity-slider" min="0" max="100" value="50">
+                                <div class="legend-bar">
+                                    <div class="legend-gradient"></div>
+                                    <div class="legend-labels">
+                                        <span>Polar (Blue)</span>
+                                        <span>Equi-weighted</span>
+                                        <span>Cartesian (Red)</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+                {% endif %}
+            </section>
+
+        </main>
+        
+        <!-- Footer -->
+        <footer class="app-footer">
+            <p>&copy; 2026 GD-CoRPA Classifier. Built with PyTorch and Flask. Reference: PSG Institute of Technology and Applied Research.</p>
+        </footer>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const slider = document.getElementById('opacity-slider');
+            const overlay = document.getElementById('gate-overlay-image');
+            if (slider && overlay) {
+                slider.addEventListener('input', (e) => {
+                    overlay.style.opacity = e.target.value / 100;
+                });
+            }
+            
+            const toggleBtn = document.getElementById('toggle-conf-btn');
+            const container = document.getElementById('conf-bars-container');
+            if (toggleBtn && container) {
+                toggleBtn.addEventListener('click', () => {
+                    const isCollapsed = container.classList.contains('collapsed');
+                    if (isCollapsed) {
+                        container.classList.remove('collapsed');
+                        container.classList.add('expanded');
+                        toggleBtn.classList.add('active');
+                        toggleBtn.querySelector('span').textContent = 'Hide Probability Breakdown';
+                    } else {
+                        container.classList.remove('expanded');
+                        container.classList.add('collapsed');
+                        toggleBtn.classList.remove('active');
+                        toggleBtn.querySelector('span').textContent = 'Show Probability Breakdown';
+                    }
+                });
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,36 @@
+# GD-CoRPA Configuration
+
+dataset:
+  train_dir: "dataset/train"
+  val_dir: "dataset/valid"
+  test_dir: "dataset/test"
+
+model:
+  img_size: 640
+  patch_size: 32
+  embed_dim: 192
+  depth: 4
+  num_heads: 6
+  num_classes: 9
+  num_mechanism_classes: 9
+  center_mode: "closed_form"  # "closed_form" or "learned"
+  drop_rate: 0.1
+  attn_drop_rate: 0.1
+
+training:
+  batch_size: 8  # Keep low for CPU execution
+  epochs: 50      # Short run due to CPU limits; user can scale as needed
+  lr: 0.0005
+  weight_decay: 0.01
+  checkpoint_dir: "checkpoints"
+  save_freq: 1
+  log_freq: 10
+  seed: 42
+  device: "cpu"  # Force cpu as CUDA is not available
+
+loss_weights:
+  pattern: 1.0
+  mechanism: 0.3
+  yield: 0.2
+  center: 0.1
+  gate_entropy: 0.001
