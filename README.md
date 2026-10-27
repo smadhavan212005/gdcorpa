@@ -21,6 +21,7 @@ A single-backbone Vision Transformer for multi-class semiconductor wafer defect 
 14. [Known Novelty Boundaries](#known-novelty-boundaries)
 15. [Data Leakage / Deduplication Protocol](#data-leakage--deduplication-protocol)
 16. [Citation](#citation)
+17. [License](#license)
 
 ---
 
@@ -61,6 +62,15 @@ The common approach in prior work is a **dual-backbone** design: one CNN/ViT enc
   - Normal die: `#1F908C` ≈ `[31, 144, 140]`
   - Defective die: `#FDE624` ≈ `[253, 230, 36]`
 - **Dequantization:** JPEG compression blurs class boundaries into >50,000 unique colors per image rather than 3 discrete colors. The `FixedViridisDequantizer` module exists specifically to undo this.
+
+**Getting the data:** the raw images are not committed to this repository (7,000+ files, ~350MB — not practical to version in git). Place your dataset under `dataset/` in this layout before training or evaluating:
+```
+dataset/
+├── train/<ClassName>/*.jpg
+├── valid/<ClassName>/*.jpg
+└── test/<ClassName>/*.jpg
+```
+where `<ClassName>` is one of the 9 pattern classes above. Per-split yield-proxy caches (`*_yield_cache.json`) are computed automatically on first load and written back into each split folder.
 
 ---
 
@@ -257,3 +267,8 @@ python data/dedup.py --train-dir dataset/train --val-dir dataset/valid --test-di
   note   = {PSG Institute of Technology and Applied Research, Coimbatore}
 }
 ```
+
+---
+
+## License
+Released under the [MIT License](LICENSE).

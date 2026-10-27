@@ -1,0 +1,23 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Dataset (large; see README for download/setup instructions)
+dataset/
+
+# Runtime-generated files
+static/temp_predictions/*
+!static/temp_predictions/.gitkeep
+
+# Yield-proxy caches (regenerated automatically from the dataset on first run)
+*_yield_cache.json
+
+# OS / editor
+.DS_Store
+*.swp
