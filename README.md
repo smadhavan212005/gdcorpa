@@ -2,6 +2,8 @@
 
 A single-backbone Vision Transformer for multi-class semiconductor wafer defect classification, with physics-informed auxiliary prediction heads for estimated failure mechanism and expected yield loss.
 
+🔗 **[Project page (GitHub Pages)](https://gdcorpa.smadhavan.me)** · 🚀 **[Live demo](https://gdcorpa.onrender.com)**
+
 ---
 
 ## Table of Contents
@@ -22,6 +24,7 @@ A single-backbone Vision Transformer for multi-class semiconductor wafer defect 
 15. [Data Leakage / Deduplication Protocol](#data-leakage--deduplication-protocol)
 16. [Citation](#citation)
 17. [License](#license)
+18. [Deployment](#deployment)
 
 ---
 
@@ -272,3 +275,15 @@ python data/dedup.py --train-dir dataset/train --val-dir dataset/valid --test-di
 
 ## License
 Released under the [MIT License](LICENSE).
+
+---
+
+## Deployment
+This repo serves two separate things:
+- **GitHub Pages** (`index.html` at repo root) — a static project overview with a link to the live demo. GitHub Pages only serves static files, so it cannot run the Flask app or the model.
+- **The real interactive dashboard** (`app.py` + `templates/index.html`) — a Flask app that uploads an image, runs it through the model, and returns pattern/mechanism/yield predictions plus the defect-localization and attention-gate overlays. This needs an actual Python process, so it's deployed separately via [Render](https://render.com) using the included `render.yaml` blueprint:
+  1. Push this repo to GitHub.
+  2. On Render, create a new **Blueprint** from the repo — it will pick up `render.yaml` automatically (free-tier web service, `gunicorn app:app`).
+  3. Once deployed, update the "Try the Live Demo" link in `index.html` (and the badge at the top of this README) to match the assigned `*.onrender.com` URL if it differs from `gdcorpa.onrender.com`.
+
+Note: the free Render tier spins down on inactivity, so the first request after idling can take 30–60s while the instance restarts and the model loads.

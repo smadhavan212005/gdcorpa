@@ -3,6 +3,7 @@ torchvision>=0.15.0
 numpy
 scipy
 flask
+gunicorn
 timm
 imagehash
 pyyaml

@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GD-CoRPA | Wafer Defect Classifier</title>
+    <meta name="description" content="GD-CoRPA: a single-backbone Vision Transformer with gated dual-coordinate relative position attention for semiconductor wafer defect classification.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        :root {
+            --bg-dark: #07070f;
+            --bg-card: rgba(20, 20, 35, 0.45);
+            --border-glass: rgba(255, 255, 255, 0.07);
+            --border-hover: rgba(255, 255, 255, 0.15);
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+            --cyan-accent: #06b6d4;
+            --cyan-glow: rgba(6, 182, 212, 0.3);
+            --purple-accent: #8b5cf6;
+            --purple-glow: rgba(139, 92, 246, 0.3);
+            --font-outfit: 'Outfit', sans-serif;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text-primary);
+            font-family: var(--font-outfit);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            overflow-x: hidden;
+            line-height: 1.6;
+        }
+
+        .glass-bg {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            z-index: -1;
+            background:
+                radial-gradient(circle at 10% 20%, rgba(139, 92, 246, 0.12) 0%, transparent 40%),
+                radial-gradient(circle at 80% 80%, rgba(6, 182, 212, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 50% 50%, #0c081e 0%, #04020a 100%);
+        }
+
+        .app-container {
+            width: 100%;
+            max-width: 1100px;
+            padding: 3rem 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 3rem;
+        }
+
+        .app-header { text-align: center; }
+
+        .logo {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .logo i {
+            font-size: 2.4rem;
+            color: var(--cyan-accent);
+            text-shadow: 0 0 15px var(--cyan-glow);
+        }
+
+        .logo h1 {
+            font-size: 2.6rem;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+            background: linear-gradient(135deg, #ffffff 30%, var(--cyan-accent) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .subtitle {
+            font-size: 1.1rem;
+            color: var(--text-secondary);
+            font-weight: 300;
+            max-width: 680px;
+            margin: 0 auto 1.5rem;
+        }
+
+        .badge-container {
+            display: flex;
+            justify-content: center;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+            margin-bottom: 2rem;
+        }
+
+        .badge {
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid var(--border-glass);
+            padding: 0.4rem 0.85rem;
+            border-radius: 50px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            color: var(--text-secondary);
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .badge i { color: var(--cyan-accent); }
+
+        .cta-row {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.6rem;
+            padding: 0.9rem 1.6rem;
+            border-radius: 12px;
+            font-family: var(--font-outfit);
+            font-size: 1rem;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.25s ease;
+            border: 1px solid transparent;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--cyan-accent), var(--purple-accent));
+            color: #fff;
+            box-shadow: 0 4px 15px rgba(6, 182, 212, 0.25);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(6, 182, 212, 0.4);
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.04);
+            border-color: var(--border-glass);
+            color: var(--text-primary);
+        }
+
+        .btn-secondary:hover {
+            border-color: var(--border-hover);
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        .glass-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-glass);
+            border-radius: 20px;
+            padding: 2rem;
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4);
+        }
+
+        .glass-card h2 {
+            font-size: 1.4rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+        }
+
+        .glass-card h2 i { color: var(--cyan-accent); }
+
+        .glass-card p { color: var(--text-secondary); font-size: 0.95rem; }
+
+        /* Pipeline */
+        .pipeline {
+            display: flex;
+            flex-direction: column;
+            gap: 0.6rem;
+            margin-top: 1.25rem;
+        }
+
+        .pipeline-step {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 0.85rem 1rem;
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--border-glass);
+            border-radius: 12px;
+        }
+
+        .pipeline-step .step-num {
+            flex-shrink: 0;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: rgba(6, 182, 212, 0.15);
+            border: 1px solid var(--cyan-accent);
+            color: var(--cyan-accent);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+            font-weight: 700;
+        }
+
+        .pipeline-step .step-text strong { color: var(--text-primary); }
+        .pipeline-step .step-text span { color: var(--text-secondary); font-size: 0.85rem; }
+
+        /* Class gallery */
+        .class-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+            gap: 0.9rem;
+            margin-top: 1.25rem;
+        }
+
+        .class-item {
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .class-item img {
+            width: 100%;
+            aspect-ratio: 1;
+            border-radius: 12px;
+            object-fit: cover;
+            border: 1px solid var(--border-glass);
+            background: #000;
+        }
+
+        .class-item span {
+            font-size: 0.75rem;
+            font-weight: 500;
+            color: var(--text-secondary);
+        }
+
+        /* Two-column feature grid */
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1.5rem;
+        }
+
+        @media (max-width: 720px) {
+            .feature-grid { grid-template-columns: 1fr; }
+        }
+
+        .feature-card {
+            display: flex;
+            gap: 1rem;
+            align-items: flex-start;
+        }
+
+        .feature-icon {
+            width: 42px;
+            height: 42px;
+            border-radius: 10px;
+            background: rgba(139, 92, 246, 0.15);
+            border: 1px solid var(--purple-accent);
+            color: var(--purple-accent);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .feature-text h3 {
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 0.3rem;
+            color: #fff;
+        }
+
+        .feature-text p { font-size: 0.85rem; }
+
+        .note-banner {
+            background: rgba(6, 182, 212, 0.08);
+            border: 1px solid rgba(6, 182, 212, 0.3);
+            border-radius: 12px;
+            padding: 1rem 1.25rem;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            display: flex;
+            gap: 0.75rem;
+            align-items: flex-start;
+        }
+
+        .note-banner i { color: var(--cyan-accent); margin-top: 0.2rem; }
+
+        .app-footer {
+            text-align: center;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+            padding-top: 1.5rem;
+        }
+
+        .app-footer a { color: var(--text-secondary); text-decoration: none; }
+        .app-footer a:hover { color: var(--cyan-accent); }
+    </style>
+</head>
+<body>
+    <div class="glass-bg"></div>
+    <div class="app-container">
+
+        <header class="app-header">
+            <div class="logo">
+                <i class="fa-solid fa-microchip"></i>
+                <h1>GD-CoRPA</h1>
+            </div>
+            <p class="subtitle">Gated Dual-Coordinate Relative Position Attention &mdash; a single-backbone Vision Transformer for semiconductor wafer defect classification, with physics-informed auxiliary heads for failure mechanism and yield loss.</p>
+            <div class="badge-container">
+                <span class="badge"><i class="fa-solid fa-brain"></i> Single Shared Backbone</span>
+                <span class="badge"><i class="fa-solid fa-atom"></i> Physics-Informed Aux Heads</span>
+                <span class="badge"><i class="fa-solid fa-crosshairs"></i> Defect Localization</span>
+            </div>
+            <div class="cta-row">
+                <a href="https://gdcorpa.onrender.com" class="btn btn-primary">
+                    <i class="fa-solid fa-wand-magic-sparkles"></i> Try the Live Demo
+                </a>
+                <a href="https://github.com/smadhavan212005/gdcorpa" class="btn btn-secondary">
+                    <i class="fa-brands fa-github"></i> View on GitHub
+                </a>
+            </div>
+        </header>
+
+        <div class="note-banner">
+            <i class="fa-solid fa-circle-info"></i>
+            <span>This page is a static project overview hosted on GitHub Pages. The interactive dashboard (image upload, live inference, defect localization) is a Flask + PyTorch app that runs on a separate server &mdash; use the <strong>Try the Live Demo</strong> button above. On a free-tier host the first request after idling can take ~30&ndash;60s to wake up.</span>
+        </div>
+
+        <section class="glass-card">
+            <h2><i class="fa-solid fa-diagram-project"></i> How it works</h2>
+            <p>A single attention backbone is augmented with two relative-position bias systems &mdash; Cartesian and polar &mdash; fused by a gate computed per query token, per attention head, per layer, instead of the usual dual-backbone late-fusion approach.</p>
+            <div class="pipeline">
+                <div class="pipeline-step">
+                    <div class="step-num">1</div>
+                    <div class="step-text"><strong>Dequantize</strong> &mdash; <span>undo JPEG color blur back to 3 discrete classes (background / normal die / defective die)</span></div>
+                </div>
+                <div class="pipeline-step">
+                    <div class="step-num">2</div>
+                    <div class="step-text"><strong>Estimate wafer center</strong> &mdash; <span>closed-form centroid + radius of gyration from the die mask</span></div>
+                </div>
+                <div class="pipeline-step">
+                    <div class="step-num">3</div>
+                    <div class="step-text"><strong>Gated dual-coordinate attention</strong> &mdash; <span>per-token blend of Cartesian and polar relative-position bias</span></div>
+                </div>
+                <div class="pipeline-step">
+                    <div class="step-num">4</div>
+                    <div class="step-text"><strong>Three prediction heads</strong> &mdash; <span>defect pattern (primary), failure mechanism, expected yield loss</span></div>
+                </div>
+            </div>
+        </section>
+
+        <section class="glass-card">
+            <h2><i class="fa-solid fa-layer-group"></i> 9 Wafer Defect Classes</h2>
+            <p>Classified from 640&times;640 viridis-colormapped wafer bin maps.</p>
+            <div class="class-grid">
+                <div class="class-item"><img src="static/samples/Center.jpg" alt="Center" loading="lazy"><span>Center</span></div>
+                <div class="class-item"><img src="static/samples/Donut.jpg" alt="Donut" loading="lazy"><span>Donut</span></div>
+                <div class="class-item"><img src="static/samples/Edge-Loc.jpg" alt="Edge-Loc" loading="lazy"><span>Edge-Loc</span></div>
+                <div class="class-item"><img src="static/samples/Edge-Ring.jpg" alt="Edge-Ring" loading="lazy"><span>Edge-Ring</span></div>
+                <div class="class-item"><img src="static/samples/Local.jpg" alt="Local" loading="lazy"><span>Local</span></div>
+                <div class="class-item"><img src="static/samples/Near-Full.jpg" alt="Near-Full" loading="lazy"><span>Near-Full</span></div>
+                <div class="class-item"><img src="static/samples/Normal.jpg" alt="Normal" loading="lazy"><span>Normal</span></div>
+                <div class="class-item"><img src="static/samples/Random.jpg" alt="Random" loading="lazy"><span>Random</span></div>
+                <div class="class-item"><img src="static/samples/Scratch.jpg" alt="Scratch" loading="lazy"><span>Scratch</span></div>
+            </div>
+        </section>
+
+        <section class="glass-card">
+            <h2><i class="fa-solid fa-star"></i> What the live demo shows</h2>
+            <div class="feature-grid">
+                <div class="feature-card">
+                    <div class="feature-icon"><i class="fa-solid fa-tag"></i></div>
+                    <div class="feature-text">
+                        <h3>Pattern classification</h3>
+                        <p>Upload a wafer map and get the predicted defect class with a full confidence breakdown across all 9 classes.</p>
+                    </div>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon"><i class="fa-solid fa-crosshairs"></i></div>
+                    <div class="feature-text">
+                        <h3>Defect localization</h3>
+                        <p>Bounding boxes around regions where defective-die density is statistically elevated above the wafer's own background scatter.</p>
+                    </div>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon"><i class="fa-solid fa-gears"></i></div>
+                    <div class="feature-text">
+                        <h3>Estimated failure mechanism</h3>
+                        <p>A physics-literature-derived root-cause mapping (e.g. CMP non-uniformity, edge handling damage, mechanical scratch).</p>
+                    </div>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon"><i class="fa-solid fa-eye"></i></div>
+                    <div class="feature-text">
+                        <h3>Attention gate routing</h3>
+                        <p>Visualizes, per patch, how much the model is relying on Cartesian vs. polar relative-position attention.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <footer class="app-footer">
+            <p>&copy; 2026 GD-CoRPA &middot; MIT Licensed &middot; <a href="https://github.com/smadhavan212005/gdcorpa">Source on GitHub</a> &middot; PSG Institute of Technology and Applied Research, Coimbatore</p>
+        </footer>
+    </div>
+</body>
+</html>
